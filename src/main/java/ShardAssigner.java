@@ -1,9 +1,7 @@
 //package main.java;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,16 +11,32 @@ class ShardAssigner{
 	
 	public static void main(String[] args) {
 
-		List<Shard> shards = getShards();
-		List<Node> nodes = getNodes();
+		List<Shard> shards = readShardsFromFile();
+		List<Node> nodes = readNodesFromFile();
 		BalanceShardsAllocator allocator = new BalanceShardsAllocator();
 		allocator.allocate(shards, nodes, 3);
-		System.out.println(nodes);
-
+		List<Assignment> assignments = new ArrayList<>();
+		for(Node node : nodes) {
+			for(Shard shard : node.getAllocatedShards()) {
+				assignments.add(new Assignment(node.getId(), shard.getIndex(), shard.getShardName()));
+			}
+		}
+		System.out.println(assignments);
+		writeAssignmentsToFile(assignments);
 	}
 
-	public static List<Shard> getShards() {
+	public static void writeAssignmentsToFile(final List<Assignment> assignments) {
+		try {
+			String str = new ObjectMapper().writeValueAsString(assignments);
+			BufferedWriter writer = new BufferedWriter(new FileWriter("output/assignments.json"));
+			writer.write(str);
+			writer.close();
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+	}
 
+	public static List<Shard> readShardsFromFile() {
 		List<Shard> shards = null;
 		try {
 			final ClassLoader classLoader = ShardAssigner.class.getClassLoader();
@@ -37,8 +51,7 @@ class ShardAssigner{
 		return shards;
 	}
 
-	public static List<Node> getNodes() {
-
+	public static List<Node> readNodesFromFile() {
 		List<Node> nodes = null;
 		try {
 			final ClassLoader classLoader = ShardAssigner.class.getClassLoader();
