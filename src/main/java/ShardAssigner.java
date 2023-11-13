@@ -1,20 +1,25 @@
-//package main.java;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.commons.io.IOUtils;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 class ShardAssigner{
 	
 	public static void main(String[] args) {
-
+		int repFactor = 0;
+		try {
+			repFactor = Integer.parseInt(args[0]);
+		} catch (final Exception e) {
+			System.out.println(e);
+		}
 		List<Shard> shards = readShardsFromFile();
 		List<Node> nodes = readNodesFromFile();
 		BalanceShardsAllocator allocator = new BalanceShardsAllocator();
-		allocator.allocate(shards, nodes, 3);
+		allocator.allocate(shards, nodes, repFactor);
 		List<Assignment> assignments = new ArrayList<>();
 		for(Node node : nodes) {
 			for(Shard shard : node.getAllocatedShards()) {
@@ -27,7 +32,9 @@ class ShardAssigner{
 
 	public static void writeAssignmentsToFile(final List<Assignment> assignments) {
 		try {
-			String str = new ObjectMapper().writeValueAsString(assignments);
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.enable(SerializationFeature.INDENT_OUTPUT);
+			String str = mapper.writeValueAsString(assignments);
 			BufferedWriter writer = new BufferedWriter(new FileWriter("output/assignments.json"));
 			writer.write(str);
 			writer.close();
