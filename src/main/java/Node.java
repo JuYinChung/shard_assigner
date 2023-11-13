@@ -1,0 +1,87 @@
+//package main.java;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+class Node{
+    @JsonProperty("id")
+    private String id;
+    @JsonProperty("total_space")
+    private long totalSpace;
+    @JsonProperty("used_space")
+    private long usedSpace;
+    private List<Shard> allocatedShards = new ArrayList<>();
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public long getTotalSpace() {
+        return totalSpace;
+    }
+
+    public void setTotalSpace(long totalSpace) {
+        this.totalSpace = totalSpace;
+    }
+
+    public long getUsedSpace() {
+        return usedSpace;
+    }
+
+    public void setUsedSpace(long usedSpace) {
+        this.usedSpace = usedSpace;
+    }
+
+    public List<Shard> getAllocatedShards() {
+        return allocatedShards;
+    }
+
+    public void setAllocatedShards(List<Shard> allocatedShards) {
+        this.allocatedShards = allocatedShards;
+    }
+
+    @Override
+    public String toString() {
+        return "Node{" +
+                "id='" + id + '\'' +
+                ", totalSpace=" + totalSpace +
+                ", usedSpace=" + usedSpace +
+                ", allocatedShards=" + allocatedShards +
+                '}';
+    }
+
+    public boolean containsShard(final String index, final int shardId) {
+        return allocatedShards.stream()
+                .filter(s -> s.getIndex().equals(index))
+                .filter(s -> s.getShardId() == shardId)
+                .count() >= 1;
+    }
+
+    public int highestPrimary(String index) {
+        return allocatedShards.stream()
+                .filter(s -> s.getIndex().equals(index))
+                .filter(s -> s.isPrimary())
+                .mapToInt(s -> s.getShardId()).max().orElse(-1);
+
+    }
+
+    public long getAllocatedShardCount(final String index) {
+        return allocatedShards.stream()
+                .filter(s -> s.getIndex().equals(index))
+                .count();
+    }
+
+    public long diskUsageInBytes() {
+        return usedSpace +
+                allocatedShards.stream()
+                        .mapToLong(i -> i.getSize()).sum();
+    }
+}

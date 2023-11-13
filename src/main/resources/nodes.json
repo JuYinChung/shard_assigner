@@ -1,0 +1,3 @@
+[{"used_space": 1, "total_space": 1000000000, "id": "nodeA"},
+ {"used_space": 1, "total_space": 1000000000, "id": "nodeB"},
+ {"used_space": 1, "total_space": 1000000000, "id": "nodeC"}]
