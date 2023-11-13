@@ -1,4 +1,4 @@
-[{"collection": "coll_0", "shard": "shard1", "size": 369700165},
- {"collection": "coll_0", "shard": "shard2", "size": 54596115},
- {"collection": "coll_1", "shard": "shard1", "size": 369120056},
- {"collection": "coll_1", "shard": "shard2", "size": 54755928}]
+[{"collection": "coll_0", "shard": "shard1", "size": 3697001},
+ {"collection": "coll_0", "shard": "shard2", "size": 3697001},
+ {"collection": "coll_0", "shard": "shard3", "size": 3697001},
+ {"collection": "coll_0", "shard": "shard4", "size": 3697001}]

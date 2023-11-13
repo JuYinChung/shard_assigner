@@ -1,2 +1,3 @@
-[{"used_space": 408300054, "total_space": 1000000000, "id": "nodeA"},
- {"used_space": 413292226, "total_space": 1000000000, "id": "nodeB"}]
+[{"used_space": 100000000, "total_space": 1000000000, "id": "nodeA"},
+ {"used_space": 100000000, "total_space": 1000000000, "id": "nodeB"},
+ {"used_space": 100000000, "total_space": 1000000000, "id": "nodeC"}]
