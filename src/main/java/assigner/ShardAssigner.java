@@ -46,7 +46,7 @@ class ShardAssigner{
 		return arguments;
 	}
 
-	private static List<Assignment> getAssignments(final List<Node> nodes, final boolean isPrimary, final boolean ignore) {
+	public static List<Assignment> getAssignments(final List<Node> nodes, final boolean isPrimary, final boolean ignore) {
 		final List<Assignment> assignments = new ArrayList<>();
 		for(Node node : nodes) {
 			for(Shard shard : node.getAllocatedShards()) {

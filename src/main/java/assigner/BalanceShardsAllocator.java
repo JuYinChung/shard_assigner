@@ -3,6 +3,7 @@ package assigner;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 public class BalanceShardsAllocator {
@@ -63,18 +64,37 @@ public class BalanceShardsAllocator {
         }
 
         public void allocateUnassigned() {
-            for(final Shard primary : shards) {
-                decideAllocateUnassigned(primary);
+            // allocate same index first
+            final TreeMap<String, List<Shard>> shardMap = getGroupedShardMap(shards);
+            for(String key : shardMap.keySet()) {
+                for(final Shard primary : shardMap.get(key)) {
+                    decideAllocateUnassigned(primary);
+                }
             }
 
             System.out.println("Finished allocating primary\n\n");
+
             for(int i = 0;i < repFactor;i++) {
-                for(final Shard primary : shards) {
-                    final Shard replica = primary.clone();
-                    replica.setPrimary(false);
-                    decideAllocateUnassigned(replica);
+                for(String key : shardMap.keySet()) {
+                    for(final Shard primary : shardMap.get(key)) {
+                        final Shard replica = primary.clone();
+                        replica.setPrimary(false);
+                        decideAllocateUnassigned(replica);
+                    }
                 }
             }
+
+            System.out.println("Finished allocating replicas\n\n");
+        }
+
+        private TreeMap<String, List<Shard>> getGroupedShardMap(final List<Shard> shards) {
+            final TreeMap<String, List<Shard>> shardMap = new TreeMap<>();
+            for(final Shard s : shards) {
+                List<Shard> list = shardMap.getOrDefault(s.getIndex(), new ArrayList<>());
+                shardMap.put(s.getIndex(), list);
+                list.add(s);
+            }
+            return shardMap;
         }
 
         private void decideAllocateUnassigned (final Shard shard) {

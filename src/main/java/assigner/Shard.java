@@ -13,6 +13,16 @@ class Shard {
 	private long size;
 	private boolean isPrimary = true;
 
+	public Shard(String index, String shardName, long size) {
+		this.index = index;
+		this.shardName = shardName;
+		this.shardId = Integer.parseInt(shardName.substring(5, shardName.length()));
+		this.size = size;
+	}
+
+	public Shard() {
+	}
+
 	public String getIndex() {
 		return index;
 	}
@@ -66,10 +76,6 @@ class Shard {
 
 	@Override
 	protected Shard clone() {
-		Shard shard = new Shard();
-		shard.setIndex(this.index);
-		shard.setShardName(this.shardName);
-		shard.setSize(this.size);
-		return shard;
+		return new Shard(this.index, this.shardName, this.size);
 	}
 }

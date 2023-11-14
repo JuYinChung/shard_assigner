@@ -16,6 +16,15 @@ class Node{
     private long usedSpace;
     private List<Shard> allocatedShards = new ArrayList<>();
 
+    public Node() {
+    }
+
+    public Node(String id, long totalSpace, long usedSpace) {
+        this.id = id;
+        this.totalSpace = totalSpace;
+        this.usedSpace = usedSpace;
+    }
+
     public String getId() {
         return id;
     }
