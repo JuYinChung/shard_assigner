@@ -8,9 +8,10 @@ import java.util.stream.Collectors;
 
 public class BalanceShardsAllocator {
 
-    public List<Shard> allocate(final List<Shard> shards, final List<Node> nodes, final int repFactor, final float indexBalance, final float shardBalance, final float diskBalance) throws Exception {
+    public List<Shard> allocate(final List<Shard> shards, final List<Node> nodes, final int repFactor,
+                                final float indexBalance, final float shardBalance, final float diskBalance) throws Exception {
         if(repFactor > nodes.size() - 1) {
-            throw new Exception("Replication factor cannot be large than node size - 1");
+            throw new IllegalArgumentException("Replication factor cannot be large than node size - 1");
         }
         final WeightFunction weightFunction = new WeightFunction(indexBalance, shardBalance, diskBalance);
         final Balancer balancer = new Balancer(weightFunction, shards, nodes, repFactor);
@@ -27,8 +28,9 @@ public class BalanceShardsAllocator {
 
         WeightFunction(float indexBalance, float shardBalance, float diskUsageBalance) {
             float sum = indexBalance + shardBalance + diskUsageBalance;
-            if (sum <= 0.0f) {
-                throw new IllegalArgumentException("Balance factors must sum to a value > 0 but was: " + sum);
+            if (indexBalance <= 0.0f || shardBalance <= 0.0f || diskUsageBalance <= 0.0f || sum <= 0.0f) {
+                throw new IllegalArgumentException("Balance factors must sum to a value > 0 but was:  indexBalance"
+                        + indexBalance + " shardBalance: " + shardBalance + " diskUsageBalance: " + diskUsageBalance);
             }
             theta0 = shardBalance / sum;
             theta1 = indexBalance / sum;
@@ -39,9 +41,9 @@ public class BalanceShardsAllocator {
             final float weightShard = node.getAllocatedShards().size() - balancer.avgShardsPerNode();
             final float weightIndex = node.getAllocatedShardCount(index) - balancer.avgShardsPerNode(index);
             final float diskUsage = (float) (node.diskUsageInBytes() - balancer.avgDiskUsageInBytesPerNode());
-            float res = (theta0 * weightShard) + (theta1 * weightIndex) + (theta2 * diskUsage);
+            float weight = (theta0 * weightShard) + (theta1 * weightIndex) + (theta2 * diskUsage);
             System.out.println("WeightShard: " + weightShard + " weightIndex: " + weightIndex + " diskUsage: " + diskUsage);
-            return res;
+            return weight;
         }
     }
 
@@ -81,7 +83,7 @@ public class BalanceShardsAllocator {
                 for(String key : shardMap.keySet()) {
                     for(final Shard primary : shardMap.get(key)) {
                         final Shard replica = primary.clone();
-                        replica.setPrimary(false);
+                        replica.setReplica();
                         decideAllocateUnassigned(replica);
                     }
                 }
@@ -135,10 +137,9 @@ public class BalanceShardsAllocator {
                     final int repId = shard.getShardId();
                     final int nodeHigh = node.highestPrimary(shard.getIndex());
                     final int minNodeHigh = minNode.highestPrimary(shard.getIndex());
-                    updateMinNode = ((((nodeHigh > repId && minNodeHigh > repId)
-                            || (nodeHigh < repId && minNodeHigh < repId))
-                            && (nodeHigh < minNodeHigh))
-                            || (nodeHigh > repId && minNodeHigh < repId));
+                    boolean isSameSide = (nodeHigh > repId && minNodeHigh > repId) || (nodeHigh < repId && minNodeHigh < repId);
+                    boolean isTwoSides = nodeHigh > repId && minNodeHigh < repId;
+                    updateMinNode = (isSameSide && nodeHigh < minNodeHigh) || isTwoSides;
                 } else {
                     updateMinNode = true;
                 }

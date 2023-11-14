@@ -21,18 +21,34 @@ Build
 make
 
 ```
+or
+```
+mvn clean install
+
+```
 Run
 ```
 make run
 
 ```
+or 
+
+```
+java -cp target/shard-assigner-1.jar assigner.ShardAssigner -r 2 -n nodes.json -s shards.json
+```
+where you can specify input arguments.
+
+
 Clean
 ```
-make run
+make clean
 
 ```
-You can pass args in Makefile.
+or
+```
+mvn clean
 
+```
 The output will be written in `output`.
 
 `output/assignments.json`: the results of all assignments
@@ -45,7 +61,7 @@ The output will be written in `output`.
 
 **Args**
 
-`-s`: the file path to store  info of unassigned shards 
+`-s`: the file path to store info of unassigned shards 
 
 `-n`: the file path to store info of nodes
 
@@ -63,6 +79,6 @@ The output will be written in `output`.
 
 **Tests**
 
-`/src/test`: the folder where the tests are stored
+`/src/test/java/assigner`: the folder where the tests are stored
 
  

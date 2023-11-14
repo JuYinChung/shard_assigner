@@ -64,6 +64,10 @@ class Shard {
 		isPrimary = primary;
 	}
 
+	public void setReplica() {
+		isPrimary = false;
+	}
+
 	@Override
     public String toString() {
         return "Shard{" +

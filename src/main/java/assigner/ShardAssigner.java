@@ -23,9 +23,11 @@ class ShardAssigner{
 		final BalanceShardsAllocator allocator = new BalanceShardsAllocator();
 		List<Shard> unassignedShards = null;
 		try {
+			// The disk balancer is set to 1e-8 because the diskInBytes is usually 10e6~10e8.
+			// We need to regulate balancer to 1/1e8. Otherwise, the disk usage would cause too much impact.
 			unassignedShards = allocator.allocate(shards, nodes, rep, 1.f, 1.f, 1e-8f);
 		} catch (final Exception e) {
-			System.out.println("Replication factor cannot be large than node size - 1");
+			System.out.println("Exception thrown " + e);
 			System.exit(1);
 		}
 		if(!unassignedShards.isEmpty()) {

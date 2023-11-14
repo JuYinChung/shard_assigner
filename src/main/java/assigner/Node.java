@@ -74,6 +74,7 @@ class Node{
                 .count() >= 1;
     }
 
+    // get max shard id for all allocated primary shards for given index
     public int highestPrimary(String index) {
         return allocatedShards.stream()
                 .filter(s -> s.getIndex().equals(index))
@@ -89,6 +90,7 @@ class Node{
     }
 
     public long diskUsageInBytes() {
+        // The total disk usage in node is the existing usage (usedSpace) + sum of allocated shard size
         return usedSpace +
                 allocatedShards.stream()
                         .mapToLong(i -> i.getSize()).sum();

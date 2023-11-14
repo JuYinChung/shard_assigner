@@ -18,7 +18,7 @@ Weight function:
 Weight = WeightShard * theta0 + WeightIndex * theta1 + diskUsage * theta2
 (User can adjust theta0, theta1, theta2 to adjust the importance of each factors)
 
-1.	How to pick the unassigned shard?
+1.  How to pick the unassigned shard?
     a.	We choose primary nodes first
     b.	We choose primary nodes with the same index first.
 2.	When we iterate the nodes, we rule out ineligible nodes
@@ -61,7 +61,6 @@ I have covered these scenarios
 3.	Test 1 index 3 shards (same size )3 nodes (same disk) 2 rep
     a.	Each node has 3 shard
     b.	Primary and replicas are on different nodes
-
 4.	When node disk are full, no shard will be assigned
 5.	When node disk are enough only for 2 shards out of 4 shards
     a.	Primary are allocated first
