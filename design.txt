@@ -1,7 +1,7 @@
 Requirements
 
 Our purpose is to write a shard allocator that can assign m shards to n nodes. (m >> n in most of the time).
-The basic attributes of the nodes are stored in nodes.json file. It includes a node's total available disk space, used disk space and id.
+The basic attributes of the nodes are stored in nodes.json file. It includes a node's total disk space, used disk space and id.
 Shard attributes are stored in shards.json. It contains shard id, collection id and shard size.
 (The collection can be viewed as Elasticsearch index. Will use 'index' in the following context).
 To assign shards in a balanced way, we deisgn weight function based on node used space, shard count on a node and  shard count of a certain index on a node.
@@ -30,10 +30,7 @@ Weight = WeightShard * theta0 + WeightIndex * theta1 + diskUsage * theta2
     b.	The node with less disk usage will be more eligible
     c.	The shards are distributed to the nodes as much evenly as possible.
 4.	If 2 nodes have the same weights, we should compare
-    a.	If their highest primary shard id are larger than current shard id , choose the smaller one
-    b.  If their highest primary shard id are smaller than current shard id, choose the larger one
-    c.  If the highest primary shard id of one node is larger than the other, choose the larger one
-
+    a.	Choose the node whose highest primary shard id is next to current shard id.
 5.	Time complexity is O(m * n)
 
 Implementation
