@@ -10,8 +10,8 @@ public class BalanceShardsAllocator {
 
     public List<Shard> allocate(final List<Shard> shards, final List<Node> nodes, final int repFactor,
                                 final float indexBalance, final float shardBalance, final float diskBalance) throws Exception {
-        if(repFactor > nodes.size() - 1) {
-            throw new IllegalArgumentException("Replication factor cannot be large than node size - 1");
+        if(repFactor > nodes.size() || repFactor < 1) {
+            throw new IllegalArgumentException("Replication factor should be smaller than node size and larger than 0");
         }
         final WeightFunction weightFunction = new WeightFunction(indexBalance, shardBalance, diskBalance);
         final Balancer balancer = new Balancer(weightFunction, shards, nodes, repFactor);
@@ -79,7 +79,7 @@ public class BalanceShardsAllocator {
 
             System.out.println("Finished allocating primary\n\n");
 
-            for(int i = 0;i < repFactor;i++) {
+            for(int i = 0;i < repFactor - 1;i++) {
                 for(String key : shardMap.keySet()) {
                     for(final Shard primary : shardMap.get(key)) {
                         final Shard replica = primary.clone();

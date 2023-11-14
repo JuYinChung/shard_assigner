@@ -23,7 +23,7 @@ public class BalanceShardsAllocatorTest {
     public void testNoAvailSpace() throws Exception {
         final List<Node> nodes = TestHelper.getNodesNoSpace();
         final List<Shard> shards = TestHelper.getStandardShards();
-        final List<Shard> unassigned = allocator.allocate(shards, nodes, 0, 1.f, 1.f, 1e-8f);
+        final List<Shard> unassigned = allocator.allocate(shards, nodes, 1, 1.f, 1.f, 1e-8f);
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);
         final List<Assignment> replicaAssignments = assigner.getAssignments(nodes, false, false);
@@ -36,25 +36,25 @@ public class BalanceShardsAllocatorTest {
     // Test with one node with much less usage to see if shards will be balanced allocated
     // Even if one of the nodes has little usage, our algo won't be biased because we still need to consider shard count and index count at the same time
     @Test
-    public void test1Index3Shard2RepWithDifferentDisk() throws Exception {
-        int rep = 2;
+    public void test1Index3Shard3RepWithDifferentDisk() throws Exception {
+        int rep = 3;
         verifySameIndex(TestHelper.getNodesWithDifferentDisk(), TestHelper.getStandardShards(), rep);
     }
 
     // Same test case as test1Index3Shard3RepWithDifferentDisk, but we emphasize disk usage more by adding the disk balance
     // Then our algo will bias the node with much less usage
     @Test
-    public void test1Index3Shard2RepWithDifferentDiskBiasedDisk() throws Exception {
-        int rep = 2;
+    public void test1Index3Shard3RepWithDifferentDiskBiasedDisk() throws Exception {
+        int rep = 3;
         final List<Node> nodes = TestHelper.getNodesWithDifferentDisk();
         final List<Shard> shards = TestHelper.getStandardShards();
         final List<Shard> unassigned = allocator.allocate(shards, nodes, rep, 1.f, 1.f, 1e-5f);
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);
         final List<Assignment> replicaAssignments = assigner.getAssignments(nodes, false, false);
-        assertEquals(shards.size() * (rep + 1), assignments.size());
+        assertEquals(shards.size() * (rep), assignments.size());
         assertEquals(shards.size(), primaryAssignments.size());
-        assertEquals(shards.size() * rep, replicaAssignments.size());
+        assertEquals(shards.size() * (rep - 1), replicaAssignments.size());
         assertEquals(0, unassigned.size());
         Node biasedNode = null;
         final List<Node> unbiasedNodes = new ArrayList<>();
@@ -70,13 +70,29 @@ public class BalanceShardsAllocatorTest {
     }
 
     @Test
-    public void test1Index3Shard3RepInvalidTooLargeRep() throws Exception {
+    public void test1Index3Shard4RepInvalidTooLargeRep() throws Exception {
         try {
-            int rep = 3;
+            int rep = 4;
             verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
             fail("Expected exception");
         } catch (Exception e) {
         }
+    }
+
+    @Test
+    public void test1Index3Shard4RepInvalidTooSmallRep() throws Exception {
+        try {
+            int rep = 0;
+            verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
+            fail("Expected exception");
+        } catch (Exception e) {
+        }
+    }
+
+    @Test
+    public void test1Index3Shard3Rep() throws Exception {
+        int rep = 3;
+        verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
     }
 
     @Test
@@ -91,17 +107,11 @@ public class BalanceShardsAllocatorTest {
         verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
     }
 
-    @Test
-    public void test1Index3Shard0Rep() throws Exception {
-        int rep = 0;
-        verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
-    }
-
     // Make sure disk usage are balanced. We have 2 big shard size Shard1, Shard2 and 2 small shard size Shard3, Shard4 assigned to 2 nodes
     // To be balanced, Shard1 should be with shard3, shard2 should be with shard 4
     @Test
-    public void test1Index2Shard0RepWithDifferentShardSize() throws Exception {
-        int rep = 0;
+    public void test1Index2Shard1RepWithDifferentShardSize() throws Exception {
+        int rep = 1;
         final List<Node> nodes = TestHelper.getStandardNodes();
         nodes.remove(nodes.size() - 1);
         final List<Shard> shards = TestHelper.getShardsWithDifferentSize();
@@ -109,9 +119,9 @@ public class BalanceShardsAllocatorTest {
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);
         final List<Assignment> replicaAssignments = assigner.getAssignments(nodes, false, false);
-        assertEquals(shards.size() * (rep + 1), assignments.size());
+        assertEquals(shards.size() * (rep), assignments.size());
         assertEquals(shards.size(), primaryAssignments.size());
-        assertEquals(shards.size() * rep, replicaAssignments.size());
+        assertEquals(shards.size() * (rep - 1), replicaAssignments.size());
         assertEquals(0, unassigned.size());
         for(Node node : nodes) {
             assertEquals(2, node.getAllocatedShards().size());
@@ -130,17 +140,17 @@ public class BalanceShardsAllocatorTest {
 
     // same index should be allocated to different nodes
     @Test
-    public void test2Index3Node1RepBalanced() throws Exception {
-        int rep = 2;
+    public void test2Index3Node3RepBalanced() throws Exception {
+        int rep = 3;
         final List<Node> nodes = TestHelper.getStandardNodes();
         final List<Shard> shards = TestHelper.getMultipleIndex();
         final List<Shard> unassigned = allocator.allocate(shards, nodes, rep, 1.f, 1.f, 1e-8f);
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);
         final List<Assignment> replicaAssignments = assigner.getAssignments(nodes, false, false);
-        assertEquals(shards.size() * (rep + 1), assignments.size());
+        assertEquals(shards.size() * (rep), assignments.size());
         assertEquals(shards.size(), primaryAssignments.size());
-        assertEquals(shards.size() * rep, replicaAssignments.size());
+        assertEquals(shards.size() * (rep - 1), replicaAssignments.size());
         assertEquals(0, unassigned.size());
         Set<String> indexList = assignments.stream()
                 .filter(a -> a.getId().equals("NodeA"))
@@ -164,7 +174,7 @@ public class BalanceShardsAllocatorTest {
     public void test2Index2ShardAvailEnoughFor2() throws Exception {
         final List<Node> nodes = TestHelper.getNodesWithLimitedSpace();
         final List<Shard> shards = TestHelper.get2IndexShards();
-        final List<Shard> unassigned = allocator.allocate(shards, nodes, 0, 1.f, 1.f, 1e-8f);
+        final List<Shard> unassigned = allocator.allocate(shards, nodes, 1, 1.f, 1.f, 1e-8f);
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);
         final List<Assignment> replicaAssignments = assigner.getAssignments(nodes, false, false);
@@ -180,12 +190,12 @@ public class BalanceShardsAllocatorTest {
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);
         final List<Assignment> replicaAssignments = assigner.getAssignments(nodes, false, false);
-        assertEquals(shards.size() * (rep + 1), assignments.size());
+        assertEquals(shards.size() * (rep), assignments.size());
         assertEquals(shards.size(), primaryAssignments.size());
-        assertEquals(shards.size() * rep, replicaAssignments.size());
+        assertEquals(shards.size() * (rep - 1), replicaAssignments.size());
         assertEquals(0, unassigned.size());
         for(Node node : nodes) {
-            assertEquals(rep + 1, node.getAllocatedShards().size());
+            assertEquals(rep, node.getAllocatedShards().size());
         }
 
         // test if primary and replicas are balanced allocated
@@ -193,17 +203,17 @@ public class BalanceShardsAllocatorTest {
                 .filter(a -> a.getShardName().equals("Shard1"))
                 .map(a -> a.getId())
                 .collect(Collectors.toSet());
-        assertEquals(rep + 1 > nodes.size() ? nodes.size() : rep + 1, nodeSet.size());
+        assertEquals(rep > nodes.size() ? nodes.size() : rep, nodeSet.size());
         nodeSet = assignments.stream()
                 .filter(a -> a.getShardName().equals("Shard2"))
                 .map(a -> a.getId())
                 .collect(Collectors.toSet());
-        assertEquals(rep + 1 > nodes.size() ? nodes.size() : rep + 1, nodeSet.size());
+        assertEquals(rep > nodes.size() ? nodes.size() : rep, nodeSet.size());
         nodeSet = assignments.stream()
                 .filter(a -> a.getShardName().equals("Shard3"))
                 .map(a -> a.getId())
                 .collect(Collectors.toSet());
-        assertEquals(rep + 1 > nodes.size() ? nodes.size() : rep + 1, nodeSet.size());
+        assertEquals(rep > nodes.size() ? nodes.size() : rep, nodeSet.size());
         // test replicas are on different nodes than the primary
         Set<String>  rNodeSet = replicaAssignments.stream()
                 .filter(a -> a.getShardName().equals("Shard1"))

@@ -17,9 +17,6 @@ class ShardAssigner{
 		int rep = (int)arguments.get("r");
 		final List<Shard> shards = readInputFromFile((String)arguments.get("s"), new TypeReference<List<Shard>>(){});
 		final List<Node> nodes = readInputFromFile((String)arguments.get("n"), new TypeReference<List<Node>>(){});
-		if(rep > nodes.size() - 1) {
-
-		}
 		final BalanceShardsAllocator allocator = new BalanceShardsAllocator();
 		List<Shard> unassignedShards = null;
 		try {
