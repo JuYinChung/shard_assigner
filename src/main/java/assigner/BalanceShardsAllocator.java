@@ -8,7 +8,10 @@ import java.util.stream.Collectors;
 
 public class BalanceShardsAllocator {
 
-    public List<Shard> allocate(final List<Shard> shards, final List<Node> nodes, final int repFactor, final float indexBalance, final float shardBalance, final float diskBalance) {
+    public List<Shard> allocate(final List<Shard> shards, final List<Node> nodes, final int repFactor, final float indexBalance, final float shardBalance, final float diskBalance) throws Exception {
+        if(repFactor > nodes.size() - 1) {
+            throw new Exception("Replication factor cannot be large than node size - 1");
+        }
         final WeightFunction weightFunction = new WeightFunction(indexBalance, shardBalance, diskBalance);
         final Balancer balancer = new Balancer(weightFunction, shards, nodes, repFactor);
         balancer.allocateUnassigned();
@@ -98,66 +101,58 @@ public class BalanceShardsAllocator {
         }
 
         private void decideAllocateUnassigned (final Shard shard) {
-            int count = 0;
             Node minNode = null;
-            boolean ignore = false;
-            while(count < 2) {
-                float minWeight = Float.POSITIVE_INFINITY;
-                for (Node node : nodes) {
-                    if (!ignore && node.containsShard(shard.getIndex(), shard.getShardId())) {
-                        continue;
-                    }
+            float minWeight = Float.POSITIVE_INFINITY;
+            for (Node node : nodes) {
 
-                    // no available disk space
-                    if((float)(node.diskUsageInBytes() + shard.getSize()) > (float)(diskThreshold * node.getTotalSpace())) {
-                        continue;
-                    }
-
-                    // simulate weight if we would add shard to node
-                    float currentWeight = weight.weight(this, node, shard.getIndex());
-                    if (currentWeight > minWeight) {
-                        continue;
-                    }
-                    final boolean updateMinNode;
-                    System.out.println("NodeId:" + node.getId() + " currentW: " + currentWeight + " minW: " + minWeight);
-                    if (currentWeight == minWeight) {
-                        /*  we have an equal weight tie breaking:
-                         *  prefer the node that holds the primary for this index with the next id in the ring ie.
-                         *  for the 3 shards 2 replica case we try to build up:
-                         *    1 2 0
-                         *    2 0 1
-                         *    0 1 2
-                         *  such that if we need to tie-break we try to prefer the node holding a shard with the minimal id greater
-                         *  than the id of the shard we need to assign.
-                         */
-                        final int repId = shard.getShardId();
-                        final int nodeHigh = node.highestPrimary(shard.getIndex());
-                        final int minNodeHigh = minNode.highestPrimary(shard.getIndex());
-                        updateMinNode = ((((nodeHigh > repId && minNodeHigh > repId)
-                                || (nodeHigh < repId && minNodeHigh < repId))
-                                && (nodeHigh < minNodeHigh))
-                                || (nodeHigh > repId && minNodeHigh < repId));
-                    } else {
-                        updateMinNode = true;
-                    }
-                    if (updateMinNode) {
-                        minNode = node;
-                        minWeight = currentWeight;
-                    }
-
+                // replica and primary will not be in same shard
+                if (node.containsShard(shard.getIndex(), shard.getShardId())) {
+                    continue;
                 }
 
-                if(minNode != null) {
-                    // decision made, allocate node
-                    minNode.getAllocatedShards().add(shard);
-                    System.out.println("Allocated shard " + shard + " to " + minNode.getId() + "\n");
-                    break;
+                // no available disk space
+                if((float)(node.diskUsageInBytes() + shard.getSize()) > (float)(diskThreshold * node.getTotalSpace())) {
+                    continue;
                 }
-                System.out.println("No decision. Reallocate " + shard + "\n");
-                ignore = true;
-                count++;
+
+                // simulate weight if we would add shard to node
+                float currentWeight = weight.weight(this, node, shard.getIndex());
+                if (currentWeight > minWeight) {
+                    continue;
+                }
+                final boolean updateMinNode;
+                System.out.println("NodeId:" + node.getId() + " currentW: " + currentWeight + " minW: " + minWeight);
+                if (currentWeight == minWeight) {
+                    /*  we have an equal weight tie breaking:
+                     *  prefer the node that holds the primary for this index with the next id in the ring ie.
+                     *  for the 3 shards 2 replica case we try to build up:
+                     *    1 2 0
+                     *    2 0 1
+                     *    0 1 2
+                     *  such that if we need to tie-break we try to prefer the node holding a shard with the minimal id greater
+                     *  than the id of the shard we need to assign.
+                     */
+                    final int repId = shard.getShardId();
+                    final int nodeHigh = node.highestPrimary(shard.getIndex());
+                    final int minNodeHigh = minNode.highestPrimary(shard.getIndex());
+                    updateMinNode = ((((nodeHigh > repId && minNodeHigh > repId)
+                            || (nodeHigh < repId && minNodeHigh < repId))
+                            && (nodeHigh < minNodeHigh))
+                            || (nodeHigh > repId && minNodeHigh < repId));
+                } else {
+                    updateMinNode = true;
+                }
+                if (updateMinNode) {
+                    minNode = node;
+                    minWeight = currentWeight;
+                }
+
             }
-            if(minNode == null) {
+            if(minNode != null) {
+                // decision made, allocate node
+                minNode.getAllocatedShards().add(shard);
+                System.out.println("Allocated shard " + shard + " to " + minNode.getId() + "\n");
+            } else {
                 noDecisionShard.add(shard);
             }
         }

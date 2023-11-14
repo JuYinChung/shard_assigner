@@ -1,0 +1,13 @@
+[ {
+  "id" : "nodeA",
+  "collection" : "coll_0",
+  "shard" : "shard1"
+}, {
+  "id" : "nodeB",
+  "collection" : "coll_0",
+  "shard" : "shard2"
+}, {
+  "id" : "nodeC",
+  "collection" : "coll_0",
+  "shard" : "shard3"
+} ]

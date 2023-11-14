@@ -14,11 +14,24 @@ class ShardAssigner{
 	
 	public static void main(String[] args) {
 		final Map<String, Object> arguments = getArgs(args);
-		System.out.println(arguments);
+		int rep = (int)arguments.get("r");
 		final List<Shard> shards = readInputFromFile((String)arguments.get("s"), new TypeReference<List<Shard>>(){});
 		final List<Node> nodes = readInputFromFile((String)arguments.get("n"), new TypeReference<List<Node>>(){});
+		if(rep > nodes.size() - 1) {
+
+		}
 		final BalanceShardsAllocator allocator = new BalanceShardsAllocator();
-		final List<Shard> unassignedShards = allocator.allocate(shards, nodes, (int)arguments.get("r"), 1.f, 1.f, 1e-8f);
+		List<Shard> unassignedShards = null;
+		try {
+			unassignedShards = allocator.allocate(shards, nodes, rep, 1.f, 1.f, 1e-8f);
+		} catch (final Exception e) {
+			System.out.println("Replication factor cannot be large than node size - 1");
+			System.exit(1);
+		}
+		if(!unassignedShards.isEmpty()) {
+			System.out.println("Failed to allocate");
+			System.exit(1);
+		}
 		final List<Assignment> assignments = getAssignments(nodes, true, true);
 		final List<Assignment> primaryAssignments = getAssignments(nodes, true, false);
 		final List<Assignment> replicaAssignments = getAssignments(nodes, false, false);

@@ -1,0 +1,100 @@
+Requirements
+
+Our purpose is to write a shard allocator that can allocate m shards to n nodes. (m >> n in most of the time).
+Node info is given by nodes.json including info like node total space, used space and id.
+Shard info is given by shards.json including info like shard id, collection id and size. (The collection can be viewed as Elasticsearch index. Will use index in the following context).
+To allocate the shards in a balanced way, we deisgn weight function based on node used space, shard count on a node and  shard count of a certain index on a node.
+User can modify the code to adjust the weight on these 3 factors based on their shard usage.
+
+Design
+
+Shard allocation can be seen as a modified bin-packing problem. Bin packing is a optimization problem which computationally is an NP hard problem.
+In our case, we want to distribute m shards to n nodes so as to minimize load/traffic on the most loaded node.
+We can follow a greedy approach which Elasticsearch uses. We iterate all shards and for each shard we choose a most eligible node.
+The way to do this is to build a weight function and calculate node weights whenever we are choosing between multiple nodes.
+The one with minimum weight wins.
+
+Weight function:
+Weight = WeightShard * theta0 + WeightIndex * theta1 + diskUsage * theta2
+(User can adjust theta0, theta1, theta2 to adjust the importance of each factors)
+
+1.	How to pick the unassigned shard?
+    a.	We choose primary nodes first
+    b.	We choose primary nodes with the same index first.
+2.	When we iterate the nodes, we rule out ineligible nodes
+    a.	If the node contains shard with same index, same shard -> ineligible since primary and replica cannot be on the same node and same plicas cannot be on the same node
+    b.	If the node used space + the allocating shard size > 90% of total node space
+3.	Using this weight function we can achieve
+    a.	Shards with same index should be distributed to as many as possible nodes.
+    b.	The node with lesser disk usage will be more eligible
+    c.	Each node should have roughly same shard count
+4.	What if 2 nodes have same weight
+    a.	Choose the min shard id whose highest primary id is larger than my current shard id -> like a ring buffer
+    b.	Shards with same index should be distributed to as many as possible nodes.
+    c.	This will help us make sure the replica of a shard is allocated to the node that has greater minimum shard id than it
+    d.	For example, 3 shards 2 replica 3 nodes
+    e.	nodeA: 1 2 0
+    f.	nodeB: 2 0 1
+    g.	nodeC: 0 1 2
+5.	Time complexity is O(m * n)
+
+Implementation
+
+ShardAllocator.java is our entry point. It contains reading input from files, writing output to files, calling BalancedShardsAllocator
+BalancedShardsAllocator.java contains an inner class Balancer and WeightFunction.
+allocate() will create a WeightFunction and pass it to Balancer
+Balancer contains 2 major function.
+One is allocateUnassigned which is to iterate over primary shards in a certain order we mentioned above, then replica shards in the same order,
+the other one is decideAllocateUnassigned which we need to decide a most eligible node for a given shard.
+We will calculate the weight of each node and choose the minimum.
+When there is a tie, we choose the one with minimum shard id that is greater than current shard id.
+
+Verification
+
+Unit tests are included to test the balance of the shard allocator
+I have covered these scenarios
+1.	Test 1 index 3 shards (same size )3 nodes (same disk) 0 rep
+    a.	Each node has 1 shard
+2.	 Test 1 index 3 shards (same size )3 nodes (same disk) 1 rep
+    a.	Each node has 2 shard
+    b.	Primary and replicas are on different nodes
+3.	Test 1 index 3 shards (same size )3 nodes (same disk) 2 rep
+    a.	Each node has 3 shard
+    b.	Primary and replicas are on different nodes
+
+4.	When node disk are full, no shard will be assigned
+5.	When node disk are enough only for 2 shards out of 4 shards
+    a.	Primary are allocated first
+    b.	Shards with same index are allocated
+6.	When one node disk is much less than two other nodes
+    a.	Shards are still evenly distributed to 3 nodes
+    b.	Same shard count on each node
+7.	Same test as 6 but the disk balance is adjusted higher
+    a.	Shards are NOT evenly distributed to 3 nodes
+    b.	The one with less disk is biased and has more shards
+8.	When shard size are different, balance the disk usage
+    a.	Bigger shards are allocated together with smaller shard to make disk balanced
+
+Pros and cons
+
+Pros:
+The balance of allocation does not rely on only one factor.
+You have the ability to adjust the balance factor based on your experience.
+Shard count is approximately the same for each node. Shard count per index is approximately the same for each node.
+Finally, the disk usage is approximately the same for each node.
+This balance means each node would get approximately same amount of traffic which can balance the JVM heap, CPU, memory consumption on each node, reducing “hot” nodes.
+Cons:
+We need to monitor the performance of the node and adjust the balance factor accordingly.
+The weight is greatly affected by the balance factor we set.
+Also, we have to regulate the disk balance factor by the average disk usage.
+
+Improvement
+
+1.	Add more validation on inputs, and add more error handling
+2.	If a certain index becomes hot, we should take the CPU, network BW, traffic into account
+3.	We should also handle the case when we need to rebalance the cluster including adding a new node, removing a node, moving shards as its usage may change
+
+Reference
+
+https://aws.amazon.com/blogs/opensource/open-distro-elasticsearch-shard-allocation/
+https://opensearch.org/blog/The-Elasticsearch-Weight-Function/#:~:text=The%20Weight%20Function,to%20each%20shard%20%2D%20node%20combination

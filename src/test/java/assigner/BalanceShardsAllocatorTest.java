@@ -20,7 +20,7 @@ public class BalanceShardsAllocatorTest {
     }
 
     @Test
-    public void testNoAvailSpace() {
+    public void testNoAvailSpace() throws Exception {
         final List<Node> nodes = TestHelper.getNodesNoSpace();
         final List<Shard> shards = TestHelper.getStandardShards();
         final List<Shard> unassigned = allocator.allocate(shards, nodes, 0, 1.f, 1.f, 1e-8f);
@@ -36,7 +36,7 @@ public class BalanceShardsAllocatorTest {
     // Test with one node with much less usage to see if shards will be balanced allocated
     // Even if one of the nodes has little usage, our algo won't be biased because we still need to consider shard count and index count at the same time
     @Test
-    public void test1Index3Shard2RepWithDifferentDisk() {
+    public void test1Index3Shard2RepWithDifferentDisk() throws Exception {
         int rep = 2;
         verifySameIndex(TestHelper.getNodesWithDifferentDisk(), TestHelper.getStandardShards(), rep);
     }
@@ -44,7 +44,7 @@ public class BalanceShardsAllocatorTest {
     // Same test case as test1Index3Shard3RepWithDifferentDisk, but we emphasize disk usage more by adding the disk balance
     // Then our algo will bias the node with much less usage
     @Test
-    public void test1Index3Shard2RepWithDifferentDiskBiasedDisk() {
+    public void test1Index3Shard2RepWithDifferentDiskBiasedDisk() throws Exception {
         int rep = 2;
         final List<Node> nodes = TestHelper.getNodesWithDifferentDisk();
         final List<Shard> shards = TestHelper.getStandardShards();
@@ -70,19 +70,29 @@ public class BalanceShardsAllocatorTest {
     }
 
     @Test
-    public void test1Index3Shard2Rep() {
+    public void test1Index3Shard3RepInvalidTooLargeRep() throws Exception {
+        try {
+            int rep = 3;
+            verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
+            fail("Expected exception");
+        } catch (Exception e) {
+        }
+    }
+
+    @Test
+    public void test1Index3Shard2Rep() throws Exception {
         int rep = 2;
         verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
     }
 
     @Test
-    public void test1Index3Shard1Rep() {
+    public void test1Index3Shard1Rep() throws Exception {
         int rep = 1;
         verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
     }
 
     @Test
-    public void test1Index3Shard0Rep() {
+    public void test1Index3Shard0Rep() throws Exception {
         int rep = 0;
         verifySameIndex(TestHelper.getStandardNodes(), TestHelper.getStandardShards(), rep);
     }
@@ -90,7 +100,7 @@ public class BalanceShardsAllocatorTest {
     // Make sure disk usage are balanced. We have 2 big shard size Shard1, Shard2 and 2 small shard size Shard3, Shard4 assigned to 2 nodes
     // To be balanced, Shard1 should be with shard3, shard2 should be with shard 4
     @Test
-    public void test1Index2Shard0RepWithDifferentShardSize() {
+    public void test1Index2Shard0RepWithDifferentShardSize() throws Exception {
         int rep = 0;
         final List<Node> nodes = TestHelper.getStandardNodes();
         nodes.remove(nodes.size() - 1);
@@ -120,7 +130,7 @@ public class BalanceShardsAllocatorTest {
 
     // same index should be allocated to different nodes
     @Test
-    public void test2Index3Node1RepBalanced() {
+    public void test2Index3Node1RepBalanced() throws Exception {
         int rep = 2;
         final List<Node> nodes = TestHelper.getStandardNodes();
         final List<Shard> shards = TestHelper.getMultipleIndex();
@@ -151,7 +161,7 @@ public class BalanceShardsAllocatorTest {
 
     // 2 shards for the same index should be assigned first
     @Test
-    public void test2Index2ShardAvailEnoughFor2() {
+    public void test2Index2ShardAvailEnoughFor2() throws Exception {
         final List<Node> nodes = TestHelper.getNodesWithLimitedSpace();
         final List<Shard> shards = TestHelper.get2IndexShards();
         final List<Shard> unassigned = allocator.allocate(shards, nodes, 0, 1.f, 1.f, 1e-8f);
@@ -165,7 +175,7 @@ public class BalanceShardsAllocatorTest {
     }
 
 
-    private void verifySameIndex(final List<Node> nodes, final List<Shard> shards, final int rep) {
+    private void verifySameIndex(final List<Node> nodes, final List<Shard> shards, final int rep) throws Exception {
         final List<Shard> unassigned = allocator.allocate(shards, nodes, rep, 1.f, 1.f, 1e-8f);
         final List<Assignment> assignments = assigner.getAssignments(nodes, true, true);
         final List<Assignment> primaryAssignments = assigner.getAssignments(nodes, true, false);

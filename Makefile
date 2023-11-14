@@ -7,4 +7,3 @@ run:
 
 clean:
 	mvn clean
-	rm -r output/*
