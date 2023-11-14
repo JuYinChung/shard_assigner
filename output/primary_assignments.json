@@ -3,11 +3,15 @@
   "collection" : "coll_0",
   "shard" : "shard1"
 }, {
+  "id" : "nodeA",
+  "collection" : "coll_1",
+  "shard" : "shard1"
+}, {
   "id" : "nodeB",
   "collection" : "coll_0",
   "shard" : "shard2"
 }, {
-  "id" : "nodeC",
-  "collection" : "coll_0",
-  "shard" : "shard3"
+  "id" : "nodeB",
+  "collection" : "coll_1",
+  "shard" : "shard2"
 } ]
